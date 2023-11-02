@@ -51,7 +51,7 @@ pipeline {
                 sh 'docker network create dev || echo "this network exists"'
                 sh 'echo y | docker container prune '
 
-                sh 'docker container run -d --rm --name campscholar -p 8081:8080 --network dev hoangvh2388/campscholar'
+                sh 'docker container run -d --rm --name campscholar -p 8082:8080 --network dev hoangvh2388/campscholar'
             }
         }
  
