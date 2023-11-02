@@ -1,3 +1,3 @@
 CREATE USER 'hoangvh238'@'%' IDENTIFIED BY 'hoangvh238';
-GRANT ALL PRIVILEGES ON db_example.* TO 'hoangvh238'@'%';
+GRANT ALL PRIVILEGES ON db_campscholar.* TO 'hoangvh238'@'%';
 FLUSH PRIVILEGES;
