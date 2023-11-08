@@ -70,6 +70,7 @@ public class PostController {
                     post.setGroup(groupServices.loadGroupById(body.getGroupId()));
                     post.setTime(body.getTime());
                     post.setContent(body.getContent());
+                    userService.plusPoint(userid,20);
 
 //                    if (file != null && !file[0].isEmpty()) {
 //                        String imagePath="";
@@ -166,15 +167,15 @@ public class PostController {
     //    @PreAuthorize("isAuthenticated() and hasRole('ROLE_USER')")
 //    @PreAuthorize("isAuthenticated() and hasRole('ROLE_USER')")
     @GetMapping("/getPosts")
-    public ArrayList<PostResponse> retrieveAllPost(){
+    public ArrayList<com.social.app.dto.PostDTO> retrieveAllPost(){
         ArrayList<Post> result = postServices.retrivePostFromDB();
-        return responseConvertService.postResponseArrayList(result);
+        return postServices.ArrayListPostDTO(result);
     }
     //______________________________________Get GROUP POSTS____________________________________________________//
     @GetMapping("/getPosts/{groupId}")
-    public ArrayList<PostResponse> retrievePostsFromGroup(@PathVariable("groupId")long grId){
+    public ArrayList<com.social.app.dto.PostDTO> retrievePostsFromGroup(@PathVariable("groupId")long grId){
         ArrayList<Post> result = postServices.retriveGroupPostFromDB(grId);
-        return responseConvertService.postResponseArrayList(result);
+        return postServices.ArrayListPostDTO(result);
     }
     //______________________________________Get a Single_post____________________________________________________//
     @GetMapping("/getPost/{postId}")
@@ -204,12 +205,45 @@ public class PostController {
         );
     }
 
+    @PreAuthorize("isAuthenticated() and hasRole('ROLE_ADMIN')")
+    @PostMapping("/deletePost/{postId}")
+    public  ResponseEntity<ResponseObject> adminDeletePost(@PathVariable("postId")long postId){
+        List<PostReport> posts = postServices.loadPostById(postId).getReports();
+        for (PostReport report: posts
+             ) {
+            userService.plusPoint(report.getUser().getUserId(),20);
+        }
+        postServices.deletePostDB(postId);
+        return ResponseEntity.status(HttpStatus.OK).body(
+                new ResponseObject("OK","Delete Succesfully","")
+        );
+    }
+
+    @PreAuthorize("isAuthenticated() and hasRole('ROLE_ADMIN')")
+    @PostMapping("/deleteReport/{postId}")
+    public  ResponseEntity<ResponseObject> deleteReport(@PathVariable("postId")long postId){
+        Post post = postServices.loadPostById(postId);
+        post.setReports(null);
+        postServices.editPostDB(post);
+        return ResponseEntity.status(HttpStatus.OK).body(
+                new ResponseObject("OK","Delete Succesfully","")
+        );
+    }
+
+
     @PostMapping("/dislike/{postId}")
     public  ResponseEntity<ResponseObject> dislikePost(@PathVariable("postId")long postId){
+        boolean isAddedPoint = true;
         // Get user by token
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        User current = userService.findUserByUsername(authentication.getName());
-        int userId = current != null ?current.getUserId():-1;
+        String userName = authentication.getName();
+        if(userName.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                new ResponseObject("Failed","Can't find user","")
+        );
+        int userId = userService.findUserByUsername(userName).getUserId();
+        // Create user
+        User user = userService.loadUserById(userId);
+
         // check if post is not found, return
         if (postServices.loadPostById(postId)==null)
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
@@ -225,6 +259,7 @@ public class PostController {
 
         // check if user already dislike, delete postlike and return
         if(likeService.postIsDisliked(postId,userId)){
+            isAddedPoint =false;
             likeService.deletePostLike(postId, userId);
             return ResponseEntity.status(HttpStatus.OK).body(
                     new ResponseObject("OK","Like post successfully",""));
@@ -232,24 +267,33 @@ public class PostController {
 
         // check if user already like, delete postlike
         if(likeService.postIsLiked(postId,userId)){
+            isAddedPoint =false;
             likeService.deletePostLike(postId,userId);
         }
 
+        // if user get enough condition, add point to user
+        if(isAddedPoint)
+            userService.plusPoint(userId,5);
+
         // else create postlike
         return ResponseEntity.status(HttpStatus.OK).body(
-                new ResponseObject("OK","Dislike post successfully",likeService.createPostLike(post, current, (byte)-1))
+                new ResponseObject("OK","Dislike post successfully",likeService.createPostLike(post, user, (byte)-1))
         );
     }
 
     @PostMapping("/like/{postId}")
     public  ResponseEntity<ResponseObject> likePost(@PathVariable("postId")long postId){
+        boolean isAddedPoint = true;
         // Get user by token
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        User current = userService.findUserByUsername(authentication.getName());
+        String userName = authentication.getName();
+        if(userName.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                new ResponseObject("Failed","Can't find user","")
+        );
+        int userId = userService.findUserByUsername(userName).getUserId();
+        // Create user
+        User user = userService.loadUserById(userId);
 
-        // check if post is not found, return
-        int userId = current != null ?current.getUserId():-1;
-        System.out.println(userId); 
         if (postServices.loadPostById(postId)==null)
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                     new ResponseObject("Failed","Can't find post","")
@@ -264,6 +308,7 @@ public class PostController {
 
         // check if user already like, delete postlike and return
         if(likeService.postIsLiked(postId,userId)){
+            isAddedPoint = false;
             likeService.deletePostLike(postId, userId);
             return ResponseEntity.status(HttpStatus.OK).body(
                     new ResponseObject("OK","Like post successfully",""));
@@ -271,12 +316,17 @@ public class PostController {
 
         // check if user already dislike, delete postlike
         if(likeService.postIsDisliked(postId,userId)){
+            isAddedPoint = false;
             likeService.deletePostLike(postId,userId);
         }
 
+        // if user get enough condition, add point to user
+        if(isAddedPoint)
+            userService.plusPoint(userId,5);
+
         // create postlike
         return ResponseEntity.status(HttpStatus.OK).body(
-                new ResponseObject("OK","Like post successfully",likeService.createPostLike(post, current, (byte)1))
+                new ResponseObject("OK","Like post successfully",likeService.createPostLike(post, user, (byte)1))
         );
     }
 
@@ -299,13 +349,15 @@ public class PostController {
     }
 
     @PostMapping("/report/{postId}")
-    public  ResponseEntity<ResponseObject> reportPost(@PathVariable long postId, @RequestParam("userid")int userId,
+    public  ResponseEntity<ResponseObject> reportPost(@PathVariable long postId,
                                                       @RequestParam("typeid") int typeId, @RequestParam("description") String description){
-        // check if post is not found, return
-        if (postServices.loadPostById(postId)==null)
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                    new ResponseObject("Failed","Can't find post","")
-            );
+        // Get user by token
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userName = authentication.getName();
+        if(userName.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                new ResponseObject("Failed","Can't find user","")
+        );
+        int userId = userService.findUserByUsername(userName).getUserId();
 
         Post post = postServices.loadPostById(postId);
         // Check if user is not in group, user can not report post
@@ -325,6 +377,15 @@ public class PostController {
         return ResponseEntity.status(HttpStatus.OK).body(
                 new ResponseObject("OK","Report post successfully",reportService.createPostReport(post, user, postReport, typeId))
         );
+    }
+
+    @GetMapping("/{userId}")
+    public ArrayList<com.social.app.dto.PostDTO> getAllPostByUserId(@PathVariable int userId){
+        // Get user
+
+        var list = postServices.getAllPostByUserId(userId);
+        // Get post by user comment
+        return postServices.ArrayListPostDTO(list);
     }
 
     @GetMapping("/all-reports/{postId}")
@@ -469,7 +530,7 @@ public class PostController {
     }
 
     @GetMapping("/search")
-    @PreAuthorize("isAuthenticated() and hasRole('ROLE_USER')")
+//    @PreAuthorize("isAuthenticated() and hasRole('ROLE_USER')")
     public ArrayList<com.social.app.dto.PostDTO> search(@RequestParam("key") String keyword) {
         return postServices.ArrayListPostDTO(postServices.fullTextSearch(keyword));
     }
@@ -485,6 +546,7 @@ public class PostController {
                 new ResponseObject("Success", "Found", likeService.getPostByUserLike(user.getUserId()))
         );
     }
+
 
     @PreAuthorize("isAuthenticated() and hasRole('ROLE_USER')")
     @GetMapping("/getPostByUserComment")
@@ -510,7 +572,7 @@ public class PostController {
     }
 
     @GetMapping("/count-comment-report")
-    @PreAuthorize("hasRole('ADMIN')")
+//    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ResponseObject> countCommentReport() {
         long result = reportService.countCommentReports();
         if (result == 0) {
@@ -521,7 +583,7 @@ public class PostController {
     }
 
     @GetMapping("/count-all-report")
-    @PreAuthorize("hasRole('ADMIN')")
+//    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ResponseObject> countAllReport() {
         long cmt = reportService.countCommentReports();
         long post =  reportService.countPostReports();
@@ -538,8 +600,10 @@ public class PostController {
         // Get user by token
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userName = authentication.getName();
-        User current = userService.findUserByUsername(userName);
-        int userId = current != null ?current.getUserId():-1;
+        if(userName.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                new ResponseObject("Failed","Can't find user","")
+        );
+        int userId = userService.findUserByUsername(userName).getUserId();
         // check if post is not found, return
         if (postServices.loadPostById(postId)==null)
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
@@ -561,5 +625,27 @@ public class PostController {
         return ResponseEntity.status(HttpStatus.OK).body(
                 new ResponseObject("Save post successfully","OK",postServices.savePost(userName,postId))
         );
+    }
+
+    @GetMapping("/save/getAll")
+    public List<com.social.app.dto.PostDTO> getAllSavedPosts(){
+        // Get user by token
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userName = authentication.getName();
+        if(userName.isEmpty()) return null;
+
+        // return list saved posts
+        return postServices.getSavedPosts(userName);
+    }
+
+    @GetMapping("/save/getAllAsId")
+    public List<Long> getAllSavedPostsAsId(){
+        // Get user by token
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userName = authentication.getName();
+        if(userName.isEmpty()) return null;
+
+        // return list saved posts
+        return postServices.getSavedPostsAsId(userName);
     }
 }

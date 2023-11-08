@@ -12,6 +12,8 @@ import java.util.List;
 
 public interface PostRepository extends JpaRepository<Post, Long> {
     ArrayList<Post> findAll();
+
+    ArrayList<Post> findAllByUserUserId(int userId);
     Post save(Post post);
     void deleteById(long id);
     Post findByPostId(long postId);
@@ -20,6 +22,8 @@ public interface PostRepository extends JpaRepository<Post, Long> {
     Post findFirstByOrderByPostId();
 
     @Query(value = "SELECT * FROM post WHERE MATCH (titles) AGAINST (?1)> 0 ORDER BY MATCH (titles) AGAINST (?1) DESC", nativeQuery = true)
+
     ArrayList<Post> fullTextSearch(String keyword);
+// WITH QUERY EXPANSION
 
 }

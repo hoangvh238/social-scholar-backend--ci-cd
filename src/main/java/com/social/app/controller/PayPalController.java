@@ -39,8 +39,8 @@ public class PayPalController {
 
     public String generateAccessToken() {
         String auth = this.getAuth(
-                "AfjeUBEZZPAGm0u1Wlz6t6V_W4Xkq0KpzZc4UeyOqfh3aVCkYCUlOwGnxhlkeHqhHg3q6IrjP_qMl2yC",
-                "ENbOoXy9jGtjdAP_WyU9v_W4nn-UDyCQj6FPEScvrjxukZwGpoVB7lg-bDV7ztUNRs3fLyxa58Trtz4-"
+                "AdaiaDzDPyBEbZW7PS9w2joYQkPNabn9o-86KZDcV8JP0nWj2ieLb7f0BtbW3A1ZhcTn4RoAz1ZybBtZ",
+                "EOihc76iScinRyDCFlYw0yu8EZJZkk_8hnbe_1-Vsg8RMpfgDZbkc0YFf_lI1Gy8SiHXPWHg0SLNiim1"
 
 
         );

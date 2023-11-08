@@ -2,6 +2,7 @@ package com.social.app.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -34,6 +35,7 @@ public class User {
     private int activityPoint;
     private boolean isLocked;
     private Date timeCreate;
+
 
     @JsonManagedReference(value = "join_user")
     @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE)
@@ -76,10 +78,11 @@ public class User {
     List<Post> posts;
 
     @OneToMany(mappedBy = "hosts")
-    @JsonManagedReference(value = "group_user")
+    @JsonBackReference(value = "group_user")
     List<Groups> groups;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.REMOVE)
+
     @JsonManagedReference(value = "payment_user")
     List<TokenPaymentHistory> tokenPaymentHistories;
 

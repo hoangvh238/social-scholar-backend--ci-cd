@@ -14,6 +14,8 @@ public class CorsConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(true);
         config.addAllowedOrigin("http://localhost:3000");
+        config.addAllowedOrigin("http://localhost:3030");
+        config.addAllowedOrigin("https://camp-scholar.vercel.app");
         config.addAllowedOrigin("https://new-gules-seven.vercel.app");
         config.addAllowedOrigin("https://www.sandbox.paypal.com");
         config.addAllowedHeader("*");

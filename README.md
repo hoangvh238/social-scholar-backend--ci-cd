@@ -1,1 +1,0 @@
-# social-scholar-backend--ci-cd

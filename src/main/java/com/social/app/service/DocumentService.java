@@ -94,7 +94,12 @@ public class DocumentService {
         return documentRepository.findAllByIsApprovedIsFalse();
     }
     public ArrayList<Document> UserApprovedCreatedDocuments(User user){
-        return documentRepository.findByAuthorAndIsApprovedIsTrue(user);
+        ArrayList<Document> list1 = documentRepository.findByAuthorAndIsApprovedIsTrue(user);
+        ArrayList<Document> list2 = documentRepository.findByAuthorAndIsApprovedIsFalse(user);
+        ArrayList<Document> total = new ArrayList<>();
+        total.addAll(list1);
+        total.addAll(list2);
+        return total;
     }
     public ArrayList<Document> GroupApprovedDocuments(Groups groups){
         return documentRepository.findByGroupAndIsApprovedIsTrue(groups);
@@ -147,5 +152,13 @@ public class DocumentService {
     }
     public Document findFirstbyIsApprovelTrue(){
         return  documentRepository.findFirstOrderByIsApprovedIsTrue();
+    }
+    public ArrayList<Document> HostAceptDoc(Groups groups){
+        ArrayList<Document> docs = new ArrayList<>();
+        for(Document d : documentRepository.findByGroupAndIsApprovedIsFalse(groups)){
+            if(d.getMessage()==null || d.getMessage().isEmpty())
+                docs.add(d);
+        }
+        return docs;
     }
 }

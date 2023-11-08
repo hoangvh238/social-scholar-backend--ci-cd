@@ -93,6 +93,11 @@ public class PostServices {
         return result;
     }
 
+    public ArrayList<Post> getAllPostByUserId(int userId){
+        ArrayList<Post> result = postRepository.findAllByUserUserId(userId);
+        return result;
+    }
+
     public Post editPostDB(Post posts){
         return postRepository.findById(posts.getPostId())
                 .map(post -> {
@@ -239,5 +244,27 @@ public class PostServices {
             }
         }
         return false;
+    }
+
+    public List<PostDTO> getSavedPosts(String userName){
+        User user = userRepository.findUserByUserName(userName);
+        List<PostSave> postSaves = postSaveRepository.findByUser(user);
+
+        List<PostDTO> result = new ArrayList<>();
+        for (PostSave postSave: postSaves) {
+            result.add(modelMapper.map(postSave.getPost(), PostDTO.class));
+        }
+        return result;
+    }
+
+    public List<Long> getSavedPostsAsId(String userName){
+        User user = userRepository.findUserByUserName(userName);
+        List<PostSave> postSaves = postSaveRepository.findByUser(user);
+
+        List<Long> result = new ArrayList<>();
+        for (PostSave postSave: postSaves) {
+            result.add(postSave.getPost().getPostId());
+        }
+        return result;
     }
 }
